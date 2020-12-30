@@ -1,0 +1,37 @@
+#Git vars
+repo_git: https://github.com/Jorginho11/b-solution.git
+repo_path: ~/b-solution
+
+#Kubectl intallation variables
+kubectl_version: "1.20.1"
+kubectl_os: "linux"
+kubectl_arch: "amd64"
+kubectl_tmp_directory: "{{ lookup('env', 'TMPDIR') | default('/tmp',true) }}" 
+kubectl_bin_directory: "/usr/local/bin"
+kubectl_binary_mode: "0755"
+kubectl_owner: "ubuntu"
+kubectl_group: "ubuntu"
+
+#Kubernetes configuration variables
+kubectl_location: /home/jvicente/.kube/config
+deployments_location: /home/jvicente/PycharmProjects/blip/templates/deployments
+
+#Kubernetes Load Balancer App configuration variables
+lb_deployment_name: lb-deployment
+lb_service_name: lb-service
+ 
+#Load Balancer App configuration variables
+  #lb
+lb_name: "demo-lb"
+lb_vip: "10.0.1.110"
+ttl: 60
+fqdn: "awsomeapp.blip.pt"
+lb_port: 8080
+  #service
+service_name: "awsomeapp"
+service_port: 8080
+  #monitor
+hc_interval: 5
+ok_msg: "OK"
+fail_msg: "FAIL"
+monitor_path: "http://webping"

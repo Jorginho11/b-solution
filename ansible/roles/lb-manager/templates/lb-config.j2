@@ -1,0 +1,20 @@
+kubernetes:
+   lb_deployment_name: {{ lb_deployment_name }}
+   lb_service_name: {{ lb_service_name }}
+   kubectl_location:  {{ kubectl_location }}
+   deployments_location: {{ deployments_location }}
+lb-config:
+   #lb
+   lb_name: {{ lb_name }}
+   lb_vip: {{ lb_vip }}
+   ttl: {{ ttl }}
+   fqdn: {{ fqdn }}
+   lb_port: {{ lb_port }}
+   #service
+   service_name: {{ service_name }}
+   service_port: {{ service_port }}
+   #healthcheck
+   hc_interval: {{ hc_interval }}
+   ok_msg: {{ ok_msg }}
+   fail_msg: {{ fail_msg }}
+   monitor_path: {{ monitor_path }}
