@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lb-deployment
+  labels:
+    app: lb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lb
+  template:
+    metadata:
+      labels:
+        app: lb
+    spec:
+      containers:
+      - name: lb
+        image: portoca/interview
+        ports:
+        - containerPort: 8080

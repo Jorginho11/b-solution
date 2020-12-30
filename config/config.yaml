@@ -1,0 +1,21 @@
+kubernetes:
+   lb_deployment_name: lb-deployment
+   lb_service_name: lb-service
+   kubectl_location: /home/jvicente/.kube/config
+   deployments_location: /home/jvicente/PycharmProjects/blip/templates/deployments
+lb-config:
+   #lb
+   lb_name: "demo-lb"
+   lb_vip: "10.0.1.110"
+   ttl: 60
+   fqdn: "awsomeapp.blip.pt"
+   lb_port: 8080
+   #service
+   service_name: "awsomeapp"
+   service_port: 8080
+   #healthcheck
+   hc_interval: 5
+   ok_msg: "OK"
+   fail_msg: "FAIL"
+   monitor_path: "http://webping"
+
