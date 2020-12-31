@@ -1,6 +1,8 @@
 ---
+
 #Install Git and clone code repo
     - name: install git
+      become: yes
       package:
         name: git
         state: present
@@ -8,7 +10,8 @@
         - git
         - config
 
-    - name: Get App Repo
+    - name: Grepo
+      become: yes
       git:
           repo: "{{ repoGit }}"
           dest: "{{ repoPath }}"
@@ -35,6 +38,7 @@
         - kubectl
 
     - name: Copy kubectl binary to destination directory
+      become: yes
       copy:
         src: "{{ kubectl_tmp_directory }}/kubernetes/client/bin/{{ item }}"
         dest: "{{ kubectl_bin_directory }}/{{ item }}"
@@ -47,9 +51,10 @@
 
 #Inject template into App config file
     - name: Copy config file
+      become: yes
       template:
         src: lb-config.j2
-        dest: "{{ repo_path }}/config/config.yaml"
+        dest: "{{ repoPath }}/config/config.yaml"
       tags: 
         - copy_files
         - server

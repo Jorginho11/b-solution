@@ -1,6 +1,6 @@
 #Git vars
-repo_git: https://github.com/Jorginho11/b-solution.git
-repo_path: ~/b-solution
+repoGit: https://github.com/Jorginho11/b-solution.git
+repoPath: /opt/repos/b-solution
 
 #Kubectl intallation variables
 kubectl_version: "1.20.1"
@@ -13,8 +13,8 @@ kubectl_owner: "ubuntu"
 kubectl_group: "ubuntu"
 
 #Kubernetes configuration variables
-kubectl_location: /home/jvicente/.kube/config
-deployments_location: /home/jvicente/PycharmProjects/blip/templates/deployments
+kubectl_location: ~/.kube/config
+deployments_location: {{ repoPath }} /templates/deployments
 
 #Kubernetes Load Balancer App configuration variables
 lb_deployment_name: lb-deployment
@@ -22,7 +22,7 @@ lb_service_name: lb-service
  
 #Load Balancer App configuration variables
   #lb
-lb_name: "demo-lb"
+lb_name: "swag"
 lb_vip: "10.0.1.110"
 ttl: 60
 fqdn: "awsomeapp.blip.pt"
