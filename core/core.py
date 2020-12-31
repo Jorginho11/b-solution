@@ -5,6 +5,7 @@ import shutil
 import filecmp
 import numpy
 import time
+import subprocess
 
 import connectors.kubernetes_connector as kc
 import connectors.lb_connector as lbc
@@ -13,7 +14,7 @@ import connectors.lb_connector as lbc
 
 
 #Load vars from config file
-with open(os.path.abspath("/home/jvicente/PycharmProjects/blip/config/config.yaml")) as file:
+with open(os.path.abspath("./config/config.yaml")) as file:
     init_params = yaml.load(file, Loader=yaml.FullLoader)
 
 #Initialize the kubectl connector with the cluster's credentials
@@ -22,15 +23,13 @@ kube_conn = kc.kubernetes_connector(init_params["kubernetes"]["kubectl_location"
 
 lb_deployment_name = init_params["kubernetes"]["lb_deployment_name"]
 lb_service_name = init_params["kubernetes"]["lb_service_name"]
-templates_path = init_params["kubernetes"]["deployments_location"]
-lb_config =  init_params["lb-config"]
+deployments_path = init_params["kubernetes"]["templates_location"] + "/deployments"
+services_path = init_params["kubernetes"]["templates_location"] + "/services"
+lb_config = init_params["lb-config"]
 
 
 #Functions that assesses if there is necessity to create LB deployment or it only needs to update it
-def process_request(ip1, ip2, ip3):
-
-    #create a list with the three ips
-    ip_list = [ip1, ip2, ip3]
+def process_request(ip_list):
 
     need_to_create = True
     #check if LB deployment exists
@@ -47,12 +46,13 @@ def process_request(ip1, ip2, ip3):
         stat = create_deployment()
 
         #create a lb deployment-active.yaml that mirrors the current state of the deployment
-        shutil.copyfile(templates_path + "/" + lb_deployment_name + ".yaml", templates_path + "/" + lb_deployment_name + "-active.yaml")
+        shutil.copyfile(deployments_path + "/" + lb_deployment_name + ".yaml", deployments_path + "/" + lb_deployment_name + "-active.yaml")
 
         #create lb-service to expose the deployment
         stat2 = create_service()
 
         #wait until the aws lb endpoint is working
+        print("Waiting for Kubernetes LB to be ready")
         wait_aws_lb_ready()
 
         # fetch the lb service's endpoint
@@ -70,7 +70,7 @@ def process_request(ip1, ip2, ip3):
     if not need_to_create:
         #check if there is a lb-deployment active
         try:
-            with open(os.path.abspath(templates_path + "/" + lb_deployment_name + "-active.yaml")) as f:
+            with open(os.path.abspath(deployments_path+ "/" + lb_deployment_name + "-active.yaml")) as f:
                 service = yaml.safe_load(f)
 
             #create lb_connector
@@ -79,7 +79,7 @@ def process_request(ip1, ip2, ip3):
             lb_conn = lbc.lb_connector(aws_lb_endpoint + ":" + str(lb_config["lb_port"]))
 
             #if there is an active deployment file check if there is any difference with the newer version
-            if filecmp.cmp(os.path.abspath(templates_path + "/" + lb_deployment_name + ".yaml"), os.path.abspath(templates_path + "/" + lb_deployment_name + "-active.yaml")):
+            if filecmp.cmp(os.path.abspath(deployments_path + "/" + lb_deployment_name + ".yaml"), os.path.abspath(deployments_path + "/" + lb_deployment_name + "-active.yaml")):
 
                 print("There are no changes in the deployment")
                 #If there are no updates check if the ips provided match those already in place
@@ -130,9 +130,26 @@ def process_request(ip1, ip2, ip3):
 
     return 0
 
+def destroy_all():
+    #evaluate if anything has been created
+    try:
+        with open(os.path.abspath(deployments_path + "/" + lb_deployment_name + "-active.yaml")) as f:
+            service = yaml.safe_load(f)
+
+        #destroy the service and the deployment
+        r = kube_conn.delete_service(lb_service_name)
+        r = kube_conn.delete_deployment(lb_deployment_name)
+        #delete the deployment-active file
+        os.remove(os.path.abspath(deployments_path + "/" + lb_deployment_name + "-active.yaml"))
+        return ("Destruction was successful")
+
+    except FileNotFoundError as e:
+        return ("No active deployment and therefore nothing to destroy")
+
+
 #DEPLOYMENT FUNCTIONS
 def create_deployment():
-    res = kube_conn.create_deployment(templates_path, lb_deployment_name)
+    res = kube_conn.create_deployment(deployments_path, lb_deployment_name)
     res_2 = kube_conn._wait_for_deployment_to_complete(lb_deployment_name)
     print("Deployment Created")
     return ("Deployment Created")
@@ -144,11 +161,10 @@ def delete_deployment():
 
 def update_deployment():
     #dar update no kubernetes
-    res = kube_conn.update_deployment(os.path.abspath(templates_path), lb_deployment_name)
-    print(res)
+    res = kube_conn.update_deployment(os.path.abspath(deployments_path), lb_deployment_name)
     #copy to deployment-active
-    shutil.copyfile(templates_path + "/" + lb_deployment_name + ".yaml",
-                    templates_path + "/" + lb_deployment_name + "-active.yaml")
+    shutil.copyfile(deployments_path + "/" + lb_deployment_name + ".yaml",
+                    deployments_path + "/" + lb_deployment_name + "-active.yaml")
     return ("Deployment Updated")
 
 def status_deployment(deployment_name):
@@ -162,23 +178,33 @@ def list_deployments():
 
 #SERVICE FUNCTIONS
 def create_service():
-    res = kube_conn.create_service(templates_path, lb_service_name)
+    #unfortunatly this does not work
+    #res = kube_conn.create_service(services_path, lb_service_name)
+
+    #this workaround is messy but al least it works
+    bash_command = "kubectl expose deployment " + lb_deployment_name + " --type=LoadBalancer --name="  + lb_service_name
+    process = subprocess.Popen(bash_command.split(), stdout=subprocess.PIPE)
+    output, error = process.communicate()
+    print (output)
     print("Service created")
     return ("Service created")
 
 def delete_service():
-    res = kube_conn.delete_service(lb_service_name)
+    #same as above
+    #res = kube_conn.delete_service(lb_service_name)
+    bash_command = "kubectl delete service " + lb_service_name
+    process = subprocess.Popen(bash_command.split(), stdout=subprocess.PIPE)
+    output, error = process.communicate()
+    print(output)
     return ("Service deleted ")
 
 def find_aws_lb_endpoint():
     r = kube_conn.list_services()
     for item in r.items:
         if item.metadata.name == "lb-service":
-            print("here is the dns")
-            print(item.status.load_balancer.ingress[0].hostname)
             return item.status.load_balancer.ingress[0].hostname
         else:
-            print("This is not what ur looking for")
+            continue
     return ("lb-service not found")
 
 
@@ -252,7 +278,10 @@ def replace_lb_services(lb_conn, lb_config, current_ips, ip_list):
     return ("Success!")
 
 
+
+#Not needed, when one is destroying stuff one destroys the whole deployment at once
 def destroy_lb(lb_conn):
+
     #Retrieve all monitors
 
     #Retrieve all services

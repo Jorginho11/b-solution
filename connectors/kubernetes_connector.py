@@ -25,7 +25,6 @@ class kubernetes_connector(base_connector.base_connector):
         with open(os.path.abspath(deployment_path+"/" + deployment_name + ".yaml")) as f:
             deployment = yaml.safe_load(f)
         resp = self.apps.create_namespaced_deployment(body=deployment, namespace=namespace)
-        print("Deployment created. status='%s'" % str(resp.status))
         return resp
 
     def delete_deployment(self, deployment_name, namespace="default"):
@@ -75,7 +74,6 @@ class kubernetes_connector(base_connector.base_connector):
         with open(os.path.abspath(service_path+"/" + service_name + ".yaml")) as f:
             service = yaml.safe_load(f)
         resp = self.kube_client.create_namespaced_service(body=service, namespace=namespace)
-        print("Service created. status='%s'" % str(resp.status))
         return resp
 
     def delete_service(self, service_name, namespace= "default"):

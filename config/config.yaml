@@ -2,7 +2,7 @@ kubernetes:
    lb_deployment_name: lb-deployment
    lb_service_name: lb-service
    kubectl_location:  /home/jvicente/.kube/config
-   deployments_location: /home/jvicente/PycharmProjects/blip/templates/deployments
+   templates_location: /home/jvicente/Documents/b-solution/templates
 lb-config:
    #lb
    lb_name: swag

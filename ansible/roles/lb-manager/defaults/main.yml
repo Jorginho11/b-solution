@@ -14,15 +14,15 @@ kubectl_group: "ubuntu"
 
 #Kubernetes configuration variables
 kubectl_location: ~/.kube/config
-deployments_location: {{ repoPath }} /templates/deployments
+deployments_location: {{ repoPath }}/templates
 
-#Kubernetes Load Balancer App configuration variables
+#Kubernetes Load Balancer App configuration variables - PLEASE DO NOT CHANGE 
 lb_deployment_name: lb-deployment
 lb_service_name: lb-service
  
 #Load Balancer App configuration variables
   #lb
-lb_name: "swag"
+lb_name: "lb-service"
 lb_vip: "10.0.1.110"
 ttl: 60
 fqdn: "awsomeapp.blip.pt"
