@@ -109,24 +109,66 @@ def process_request(ip_list):
                 update_deployment()
 
                 #wait for the update to complete
-
+                time.sleep(10)
                 print("The deployment has been updated!")
 
                 #check if there are changes in the services
+                services_info = lb_conn.list_all_services()
+                current_ips = list()
+                for key in services_info.keys():
+                    current_ips.append(services_info[key]["ip"])
 
-                return ("ok")
+                print("Current Service IPS are: {}".format(current_ips))
+
+                # check if there are any differences
+                print(set(ip_list) == set(current_ips))
+
+                # if they match to the ones provided as arguments do nothing
+                if set(ip_list) == set(current_ips):
+                    return ("No changes detected")
+
+                # if the IPs are different delete the current ones and replace them with the new ones
+                else:
+                    print("Fuck, there are changes")
+                    replace_lb_services(lb_conn, lb_config, current_ips, ip_list)
+                    return ("Services have been updated")
 
         except FileNotFoundError as e:
-            #if there is a service a service already up but no record of active template file
-            # delete the existing service and recreate
-            delete_deployment()
-            delete_service()
+            print("We found a service already running but found no deployment-active file!")
+            print("Destroying zombie LB app")
+            #if there is a  service already up but no record of active template file delete the existing service and recreate
+            r = kube_conn.delete_service(lb_service_name)
+            r = kube_conn.delete_deployment(lb_deployment_name)
+            print("Destroyed the zombie LB deployment successfully")
+            print("Destroyed the zombie LB service successfully")
 
-            create_deployment()
+            #Create the serbvice again
+            # creation of the deployment
+            stat = create_deployment()
 
-            #FAZER O PROCESSO TODO DO 0 OUTRA VEZ
+            # create a lb deployment-active.yaml that mirrors the current state of the deployment
+            shutil.copyfile(deployments_path + "/" + lb_deployment_name + ".yaml",
+                            deployments_path + "/" + lb_deployment_name + "-active.yaml")
 
-            print ("duh")
+            # create lb-service to expose the deployment
+            stat2 = create_service()
+
+            # wait until the aws lb endpoint is working
+            print("Waiting for Kubernetes LB to be ready")
+            wait_aws_lb_ready()
+
+            # fetch the lb service's endpoint
+            aws_lb_endpoint = find_aws_lb_endpoint()
+            print("aws-endpoint found: {}".format(aws_lb_endpoint))
+
+            # create lb_connector instance to configure the lb application
+            lb_conn = lbc.lb_connector(aws_lb_endpoint + ":" + str(lb_config["lb_port"]))
+
+            # configure the lb_app
+            create_and_configure_lb(lb_conn, lb_config, ip_list)
+
+            return ("Success!")
+
 
     return 0
 
@@ -209,7 +251,6 @@ def find_aws_lb_endpoint():
 
 
 def wait_aws_lb_ready():
-    #TODO melhorar este prego ....
     time.sleep(180)
     return ("ok")
 
@@ -230,9 +271,11 @@ def create_and_configure_lb(lb_conn, lb_config, ip_list):
     #create a service and its monitor for each ip provided
     for item in ip_list:
         resp = lb_conn.create_service(lb_config["service_name"] + "-" + item, item, lb_config["service_port"])
+        print(resp)
         print("Service {} created".format(resp["name"]))
         resp_2 = lb_conn.create_monitor(lb_config["service_name"] + "-" + item + "-monitor", lb_config["ok_msg"],
                                             lb_config["hc_interval"], lb_config["monitor_path"])
+        print(resp_2)
         print("Monitor {} created".format(resp_2["name"]))
         resp_3 = lb_conn.bind_monitor_to_service(lb_config["service_name"] + "-" + item, lb_config["service_name"] + "-" + item + "-monitor")
         print("Monitor {} bound to Service {}".format(resp["name"], resp_2["name"]))
@@ -304,11 +347,11 @@ def destroy_lb(lb_conn):
 #TESTE
 def teste():
 
-    lb_conn = lbc.lb_connector("aee49a93eac6b4a5f945ba2972347ff6-945974031.eu-west-1.elb.amazonaws.com:" + str(lb_config["lb_port"]))
+    lb_conn = lbc.lb_connector("ac47d2e917a6d49ae9ba4d65c4a7d3f0-131937175.eu-west-1.elb.amazonaws.com:" + str(lb_config["lb_port"]))
     #create_and_configure_lb(lb_conn, lb_config, ["10.0.1.1", "10.0.1.2", "10.0.1.3"])
 
-    #aresp7 = lb_conn.list_all_monitors()
-    #print(resp7)
+    resp7 = lb_conn.list_all_monitors()
+    print(resp7)
     resp8 = lb_conn.list_all_services()
     print(resp8)
     #resp9 = lb_conn.list_all_lbs()
